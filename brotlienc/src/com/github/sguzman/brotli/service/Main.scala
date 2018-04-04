@@ -64,9 +64,9 @@ object Main {
               val up = Upload(user, repo)
 
               if (urls.contains(up)) {
-                val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asString.body)
+                val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes.body)
                 if (urls(up)) {
-                  body.addHeaders((HttpString("Accept-Encoding"), HttpString("br")))
+                  body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
                 } else {
                   body
                 }
