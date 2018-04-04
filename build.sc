@@ -85,11 +85,42 @@ object brotlienc extends ScalaModule {
     MavenRepository("https://jcenter.bintray.com")
   )
 
+  /** SPBC Executable Download */
+  def spbc = T{
+    mkdir(T.ctx().dest)
+    val wd = pwd
+    interp.load.ivy("org.scalaj" %% "scalaj-http" % "2.3.0")
+    import scalaj.http._
+
+    val exec = Http("https://github.com/scalapb/ScalaPB/releases/download/v0.7.1/scalapbc-0.7.1.zip")
+      .option(HttpOptions.followRedirects(true)).asBytes.body
+
+    write(T.ctx().dest / "spbc.zip", exec)
+    %%('unzip, T.ctx().dest / "spbc.zip", "-d", T.ctx().dest)
+
+    %%('find, T.ctx().dest)
+  }
+
+  def protoc = T{
+    val _ = spbc()
+    val name = "brotlienc"
+    val exec = pwd / "out" / name / "spbc" / "dest" / "scalapbc-0.7.1" / "bin" / "scalapbc"
+    val protoFiles = %%('gfind, pwd / name / "protobuf", "-type", "f", "-name", "*.proto").out.lines
+
+    protoFiles.foreach{a =>
+      %%bash(exec, s"--proto_path=${pwd / name / "protobuf"}", a, s"--scala_out=${pwd / name / "src"}")
+    }
+
+    ls.rec(pwd / name / "protobuf").map(PathRef(_))
+  }
+
   /** Ivy dependencies */
   def ivyDeps = Agg(
     ivy"org.scalaj::scalaj-http:2.3.0",
     ivy"com.outr::scribe:2.3.1",
-    ivy"com.criteo.lolhttp::lolhttp:0.9.3"
+    ivy"com.criteo.lolhttp::lolhttp:0.9.3",
+    ivy"com.thesamet.scalapb::compilerplugin:0.7.1",
+    ivy"com.thesamet.scalapb::scalapb-runtime:0.7.1"
   )
 
   def forkArgs = Seq("-Xmx4g")
