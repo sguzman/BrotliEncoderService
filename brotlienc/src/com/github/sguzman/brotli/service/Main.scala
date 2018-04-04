@@ -14,6 +14,7 @@ import scala.util.{Failure, Success}
 object Main {
   implicit final class StrWrap(str: String) {
     def before(sep: String) = StringUtils.substringBefore(str, sep)
+    def afterLast(sep: String) = StringUtils.substringAfterLast(str, sep)
   }
 
   val urls: mutable.HashMap[String, Upload] = mutable.HashMap()
@@ -26,29 +27,46 @@ object Main {
 
     Server.listen(port) {req =>
       util.Try{
-        req.readAs[String].map { url =>
+        req.readAs[String].map{url =>
           scribe.info(s"Received: $url")
-          val obj = new URL(url)
           req.method match {
             case HttpMethod("PUT") =>
-              scribe.info(s"Path ${obj.getPath}")
-
-              val user = obj.getPath.stripPrefix("/").before("/")
-              scribe.info(s"User $user")
-
-              val repo = obj.getPath.stripPrefix(s"/$user/").before("/")
-              scribe.info(s"Repo $repo")
-
-              val file = StringUtils.substringAfterLast(obj.getPath, "/")
-              scribe.info(s"File $file")
-
-              val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
-              if (exists.is2xx) {
-                urls.put(url, Upload(s"/$user/$repo/blob/$file"))
-                Ok(urls(url).toProtoString)
+              val obj = new URL(url)
+              if (urls.contains(url)) {
+                Ok("URL already stored")
               } else {
-                NotFound(s"$url not found on github")
+                scribe.info(s"Path ${obj.getPath}")
+
+                val user = obj.getPath.stripPrefix("/").before("/")
+                scribe.info(s"User $user")
+
+                val repo = obj.getPath.stripPrefix(s"/$user/").before("/")
+                scribe.info(s"Repo $repo")
+
+                val file = obj.getPath.afterLast("/")
+                scribe.info(s"File $file")
+
+                val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
+                if (exists.is2xx) {
+                  urls.put(url, Upload(s"/$user/$repo/"))
+                  scribe.info(urls.toString)
+                  Ok(urls(url).toProtoString)
+                } else {
+                  NotFound(s"$url not found on github")
+                }
               }
+            case HttpMethod("GET") =>
+              if (urls.contains(url)) {
+                val body = Ok(Http(s"https://github.com${urls(url).url}/blob/${url.afterLast("/")}").asString.body)
+                if (urls(url).isBrotli) {
+                  body.addHeaders((HttpString("Accept-Encoding"), HttpString("br")))
+                } else {
+                  body
+                }
+              } else {
+                NotFound
+              }
+
             case _ => NotFound
           }
         }
