@@ -1,17 +1,22 @@
 package com.github.sguzman.brotli.service
 
-import lol.http.Server
+import java.net.URL
+
+import com.github.sguzman.brotli.service.upload.Upload
+import lol.http.{Server, _}
+import org.apache.commons.lang3.StringUtils
+import scalaj.http.Http
 
 import scala.collection.mutable
-import scala.util.{Failure, Success}
-import lol.http._
-import scalaj.http.{Http, HttpOptions}
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 
 object Main {
-  final case class Model(url: String, isBrotli: Boolean)
-  val urls: mutable.HashMap[String, Model] = mutable.HashMap()
+  implicit final class StrWrap(str: String) {
+    def before(sep: String) = StringUtils.substringBefore(str, sep)
+  }
+
+  val urls: mutable.HashMap[String, Upload] = mutable.HashMap()
 
   def main(args: Array[String]): Unit = {
     val port = util.Try(System.getenv("PORT").toInt) match {
@@ -20,11 +25,23 @@ object Main {
     }
 
     Server.listen(port) {req =>
-      val url = req.readAs[Array[Byte]].map(_.map(_.toChar).mkString)
-      req.method match {
-        case HttpMethod("PUT") =>
-          Ok(Http(url.toString).option(HttpOptions.followRedirects(true)).asBytes.is2xx.toString)
-        case _ => NotFound
+      req.readAs[String].map {url =>
+        scribe.info(s"Received: $url")
+        val obj = new URL(url)
+        req.method match {
+          case HttpMethod("PUT") =>
+            scribe.info(s"Path ${obj.getPath}")
+
+            val user = obj.getPath.stripPrefix("/").before("/")
+            scribe.info(s"User $user")
+
+            val repo = obj.getPath.stripPrefix(s"/$user/").before("/")
+            scribe.info(s"Repo $repo")
+
+            val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
+            Ok(exists.body)
+          case _ => NotFound
+        }
       }
     }
 
