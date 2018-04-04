@@ -33,9 +33,9 @@ object Main {
     Server.listen(port) {req =>
       util.Try{
         req.readAs[String].map{url =>
-          scribe.info(s"Received: $url")
           req.method match {
             case HttpMethod("PUT") =>
+              scribe.info(s"Received: $url")
               val obj = new URL(url)
               val (user, repo) = extract(obj.getPath)
 
@@ -58,13 +58,14 @@ object Main {
               }
             case HttpMethod("GET") =>
               val file = req.path.afterLast("/")
-              val repo = req.path.stripSuffix(s"/$file").afterLast("/")
-              val user = req.path.stripSuffix(s"/$repo/$file").afterLast("/")
+              val branch = req.path.stripSuffix(s"/$file").afterLast("/")
+              val repo = req.path.stripSuffix(s"/$branch/$file").afterLast("/")
+              val user = req.path.stripSuffix(s"/$repo/$branch/$file").afterLast("/")
               val up = Upload(user, repo)
 
-              if (urls.contains(Upload(user, repo))) {
-                val body = Ok(Http(s"https://github.com/$user/$repo/blob/$file").asString.body)
-                if (urls(Upload(user, repo))) {
+              if (urls.contains(up)) {
+                val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asString.body)
+                if (urls(up)) {
                   body.addHeaders((HttpString("Accept-Encoding"), HttpString("br")))
                 } else {
                   body
