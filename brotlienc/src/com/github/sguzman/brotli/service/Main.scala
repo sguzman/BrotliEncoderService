@@ -13,12 +13,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 object Main {
+  final case class Item(user: String, repo: String, branch: String, file: String, brotli: Boolean)
+
   implicit final class StrWrap(str: String) {
     def before(sep: String) = StringUtils.substringBefore(str, sep)
     def afterLast(sep: String) = StringUtils.substringAfterLast(str, sep)
   }
-
-  val urls: mutable.HashSet[Upload] = mutable.HashSet()
 
   def main(args: Array[String]): Unit = {
     val port = util.Try(System.getenv("PORT").toInt) match {
@@ -28,58 +28,27 @@ object Main {
 
     Server.listen(port) {req =>
       util.Try{
-        req.readAs[Array[Byte]].map{url =>
-          req.method match {
-            case HttpMethod("PUT") =>
-              scribe.info(s"Received: $url")
-              val up = Upload.parseFrom(url)
-              val user = up.user
-              val repo = up.repo
+        req.method match {
+          case HttpMethod("GET") =>
+            val split = req.path.split("/")
+            val obj = Item(split(0), split(1), split(2), split(3), req.queryStringParameters.contains("brotli"))
 
-              scribe.info(s"User $user")
-              scribe.info(s"Repo $repo")
+            scribe.info(obj.user)
+            scribe.info(obj.repo)
+            scribe.info(obj.branch)
+            scribe.info(obj.file)
 
-              if (urls.contains(up)) {
-                Ok("URL already stored")
-              } else {
+            val body = Ok(Http(s"https://raw.githubusercontent.com/${obj.user}/${obj.repo}/${obj.branch}/${obj.file}").asBytes.body)
+            val response = if (obj.brotli) {
+              body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
+            } else {
+              body
+            }
 
-                val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
-                if (exists.is2xx && decode[Github](exists.body).right.get.author.`type` != "") {
-                  urls.add(up)
-                  scribe.info(urls.toString)
-                  Ok(urls(up).toString)
-                } else {
-                  NotFound(s"$url not found on github")
-                }
-              }
-            case HttpMethod("GET") =>
-              val regex = "^/([0-9A-Za-z-]+)/([0-9A-Za-z-]+)/([0-9A-Za-z-]+)/(.+)$".r
-              val brotli = req.queryStringParameters.contains("brotli") && req.queryStringParameters("brotli").toBoolean
-              val regex(user, repo, branch, file) = req.path
-              scribe.info(user)
-              scribe.info(repo)
-              scribe.info(branch)
-              scribe.info(file)
-              scribe.info(s"Brotli $brotli")
-
-              val up = Upload(repo, user)
-
-              if (urls.contains(up)) {
-                val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes.body)
-                (if (brotli) {
-                  body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
-                } else {
-                  body
-                }).addHeaders(
-                  (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
-                  (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
-                )
-              } else {
-                NotFound
-              }
-
-            case _ => NotFound
-          }
+            response.addHeaders(
+              (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
+              (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+          case _ => NotFound
         }
       } match {
           case Success(v) => v
