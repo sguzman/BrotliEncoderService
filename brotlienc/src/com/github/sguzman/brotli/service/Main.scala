@@ -3,6 +3,7 @@ package com.github.sguzman.brotli.service
 import java.net.URL
 
 import com.github.sguzman.brotli.service.protoc.upload.Upload
+import com.github.sguzman.brotli.service.typesafe.Github
 import lol.http.{Server, _}
 import org.apache.commons.lang3.StringUtils
 import scalaj.http.Http
@@ -10,6 +11,9 @@ import scalaj.http.Http
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
+
+import io.circe.parser.decode
+import io.circe.generic.auto._
 
 object Main {
   implicit final class StrWrap(str: String) {
@@ -49,7 +53,7 @@ object Main {
               } else {
 
                 val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
-                if (exists.is2xx) {
+                if (exists.is2xx && decode[Github](exists.body).right.get.author.`type` != "") {
                   urls.add(up)
                   scribe.info(urls.toString)
                   Ok(urls(up).toString)
