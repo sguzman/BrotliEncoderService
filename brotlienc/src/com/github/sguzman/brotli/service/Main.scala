@@ -37,33 +37,32 @@ object Main {
           req.method match {
             case HttpMethod("PUT") =>
               val obj = new URL(url)
-              if (urls.contains(url)) {
+              val (user, repo) = extract(obj.getPath)
+
+              scribe.info(s"Path ${obj.getPath}")
+              scribe.info(s"User $user")
+              scribe.info(s"Repo $repo")
+
+              if (urls.contains(Upload(user, repo))) {
                 Ok("URL already stored")
               } else {
-                scribe.info(s"Path ${obj.getPath}")
-
-                val user = obj.getPath.stripPrefix("/").before("/")
-                scribe.info(s"User $user")
-
-                val repo = obj.getPath.stripPrefix(s"/$user/").before("/")
-                scribe.info(s"Repo $repo")
-
-                val file = obj.getPath.afterLast("/")
-                scribe.info(s"File $file")
 
                 val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
                 if (exists.is2xx) {
-                  urls.put(url, Upload(s"/$user/$repo/"))
+                  urls.put(Upload(user, repo), false)
                   scribe.info(urls.toString)
-                  Ok(urls(url).toProtoString)
+                  Ok(urls(Upload(user, repo)))
                 } else {
                   NotFound(s"$url not found on github")
                 }
               }
             case HttpMethod("GET") =>
-              if (urls.contains(url)) {
-                val body = Ok(Http(s"https://github.com${urls(url).url}/blob/${url.afterLast("/")}").asString.body)
-                if (urls(url).isBrotli) {
+              val obj = new URL(url)
+              val (user, repo) = extract(obj.getPath)
+
+              if (urls.contains(Upload(user, repo))) {
+                val body = Ok(Http(s"https://github.com/$user/$repo/blob/${req.path.afterLast("/")}").asString.body)
+                if (urls(Upload(user, repo))) {
                   body.addHeaders((HttpString("Accept-Encoding"), HttpString("br")))
                 } else {
                   body
