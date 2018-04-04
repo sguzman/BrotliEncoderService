@@ -1,2 +1,8 @@
 *.class
 *.log
+.idea/
+target/
+out/
+lib/
+*.iml
+*.msg
