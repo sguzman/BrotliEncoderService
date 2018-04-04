@@ -46,7 +46,7 @@ object Main {
         }
       } match {
           case Success(v) => v
-          case Failure(_) => InternalServerError
+          case Failure(e) => InternalServerError(e.getMessage)
         }
     }
 
