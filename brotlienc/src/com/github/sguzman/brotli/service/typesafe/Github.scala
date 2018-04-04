@@ -9,6 +9,6 @@ case class Github(
                    html_url: String,
                    parents: List[Parent],
                    sha: String,
-                   stat: Stat,
+                   stats: Stat,
                    url: String
                  )
