@@ -39,8 +39,16 @@ object Main {
               val repo = obj.getPath.stripPrefix(s"/$user/").before("/")
               scribe.info(s"Repo $repo")
 
+              val file = StringUtils.substringAfterLast(obj.getPath, "/")
+              scribe.info(s"File $file")
+
               val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
-              Ok(exists.body)
+              if (exists.is2xx) {
+                urls.put(url, Upload(s"/$user/$repo/blob/$file"))
+                Ok(urls(url).toProtoString)
+              } else {
+                NotFound(s"$url not found on github")
+              }
             case _ => NotFound
           }
         }
