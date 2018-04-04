@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package com.github.sguzman.brotli.service;
+
+message Upload {
+    string url = 1;
+    bool isBrotli = 2;
+}
+
