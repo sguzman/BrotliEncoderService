@@ -1,14 +1,9 @@
 package com.github.sguzman.brotli.service
 
-import com.github.sguzman.brotli.service.protoc.upload.Upload
-import com.github.sguzman.brotli.service.typesafe.Github
-import io.circe.generic.auto._
-import io.circe.parser.decode
 import lol.http.{Server, _}
 import org.apache.commons.lang3.StringUtils
 import scalaj.http.Http
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
@@ -50,6 +45,7 @@ object Main {
               response.addHeaders(
                 (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
                 (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+              )
             } else {
               NotFound
             }
