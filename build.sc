@@ -88,7 +88,8 @@ object brotlienc extends ScalaModule {
   /** Ivy dependencies */
   def ivyDeps = Agg(
     ivy"org.scalaj::scalaj-http:2.3.0",
-    ivy"com.outr::scribe:2.3.1"
+    ivy"com.outr::scribe:2.3.1",
+    ivy"com.criteo.lolhttp::lolhttp:0.9.3"
   )
 
   def forkArgs = Seq("-Xmx4g")
