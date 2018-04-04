@@ -60,7 +60,7 @@ object Main {
               scribe.info(repo)
               scribe.info(branch)
               scribe.info(file)
-              scribe.info(brotli)
+              scribe.info(s"Brotli $brotli")
 
               val up = Upload(repo, user)
 
