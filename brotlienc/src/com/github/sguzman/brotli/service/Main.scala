@@ -26,7 +26,7 @@ object Main {
         req.method match {
           case HttpMethod("GET") =>
             val split = req.path.split("/")
-            val obj = Item(split(0), split(1), split(2), split(3), req.queryStringParameters.contains("brotli"))
+            val obj = Item(split(1), split(2), split(3), split(4), req.queryStringParameters.contains("brotli"))
 
             scribe.info(obj.user)
             scribe.info(obj.repo)
