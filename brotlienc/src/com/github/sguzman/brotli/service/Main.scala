@@ -17,7 +17,12 @@ object Main {
     def afterLast(sep: String) = StringUtils.substringAfterLast(str, sep)
   }
 
-  val urls: mutable.HashMap[String, Upload] = mutable.HashMap()
+  def extract(url: String) = {
+    val user = url.stripPrefix("/").before("/")
+    (user, url.stripPrefix(s"/$user/").before("/"))
+  }
+
+  val urls: mutable.HashMap[Upload, Boolean] = mutable.HashMap()
 
   def main(args: Array[String]): Unit = {
     val port = util.Try(System.getenv("PORT").toInt) match {
