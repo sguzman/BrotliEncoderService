@@ -66,11 +66,14 @@ object Main {
 
               if (urls.contains(up)) {
                 val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes.body)
-                if (brotli) {
+                (if (brotli) {
                   body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
                 } else {
                   body
-                }
+                }).addHeaders(
+                  (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
+                  (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+                )
               } else {
                 NotFound
               }
