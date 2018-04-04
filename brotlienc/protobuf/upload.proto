@@ -3,7 +3,7 @@ syntax = "proto3";
 package com.github.sguzman.brotli.service.protoc;
 
 message Upload {
-    string url = 1;
-    bool isBrotli = 2;
+    string user = 1;
+    string repo = 2;
 }
 
