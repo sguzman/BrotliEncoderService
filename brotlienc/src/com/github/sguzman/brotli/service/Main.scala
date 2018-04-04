@@ -51,17 +51,19 @@ object Main {
                 if (exists.is2xx) {
                   urls.put(Upload(user, repo), false)
                   scribe.info(urls.toString)
-                  Ok(urls(Upload(user, repo)))
+                  Ok(urls(Upload(user, repo)).toString)
                 } else {
                   NotFound(s"$url not found on github")
                 }
               }
             case HttpMethod("GET") =>
-              val obj = new URL(url)
-              val (user, repo) = extract(obj.getPath)
+              val file = req.path.afterLast("/")
+              val repo = req.path.stripSuffix(s"/$file").afterLast("/")
+              val user = req.path.stripSuffix(s"/$repo/$file").afterLast("/")
+              val up = Upload(user, repo)
 
               if (urls.contains(Upload(user, repo))) {
-                val body = Ok(Http(s"https://github.com/$user/$repo/blob/${req.path.afterLast("/")}").asString.body)
+                val body = Ok(Http(s"https://github.com/$user/$repo/blob/$file").asString.body)
                 if (urls(Upload(user, repo))) {
                   body.addHeaders((HttpString("Accept-Encoding"), HttpString("br")))
                 } else {
