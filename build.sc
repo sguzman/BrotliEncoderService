@@ -120,7 +120,8 @@ object brotlienc extends ScalaModule {
     ivy"com.outr::scribe:2.3.1",
     ivy"com.criteo.lolhttp::lolhttp:0.9.3",
     ivy"com.thesamet.scalapb::compilerplugin:0.7.1",
-    ivy"com.thesamet.scalapb::scalapb-runtime:0.7.1"
+    ivy"com.thesamet.scalapb::scalapb-runtime:0.7.1",
+    ivy"org.apache.commons:commons-lang3:3.7"
   )
 
   def forkArgs = Seq("-Xmx4g")
