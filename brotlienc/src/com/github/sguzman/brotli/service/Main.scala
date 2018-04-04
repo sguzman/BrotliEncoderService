@@ -53,18 +53,20 @@ object Main {
                 }
               }
             case HttpMethod("GET") =>
-              val query = req.queryString.getOrElse("")
+              val regex = "^/([0-9A-Za-z-]+)/([0-9A-Za-z-]+)/([0-9A-Za-z-]+)/(.+)$".r
+              val brotli = req.queryStringParameters.contains("brotli") && req.queryStringParameters("brotli").toBoolean
+              val regex(user, repo, branch, file) = req.path
+              scribe.info(user)
+              scribe.info(repo)
+              scribe.info(branch)
+              scribe.info(file)
+              scribe.info(brotli)
 
-              val path = req.path.stripSuffix(query)
-              val file = req.path.afterLast("/")
-              val branch = req.path.stripSuffix(s"/$file").afterLast("/")
-              val repo = req.path.stripSuffix(s"/$branch/$file").afterLast("/")
-              val user = req.path.stripSuffix(s"/$repo/$branch/$file").afterLast("/")
               val up = Upload(repo, user)
 
               if (urls.contains(up)) {
                 val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes.body)
-                if (query == "brotli=true") {
+                if (brotli) {
                   body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
                 } else {
                   body
