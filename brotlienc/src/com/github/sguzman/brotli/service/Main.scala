@@ -22,7 +22,7 @@ object Main {
     (user, url.stripPrefix(s"/$user/").before("/"))
   }
 
-  val urls: mutable.HashMap[Upload, Boolean] = mutable.HashMap()
+  val urls: mutable.HashSet[Upload] = mutable.HashSet()
 
   def main(args: Array[String]): Unit = {
     val port = util.Try(System.getenv("PORT").toInt) match {
@@ -38,34 +38,38 @@ object Main {
               scribe.info(s"Received: $url")
               val obj = new URL(url)
               val (user, repo) = extract(obj.getPath)
+              val up = Upload(user, repo)
 
               scribe.info(s"Path ${obj.getPath}")
               scribe.info(s"User $user")
               scribe.info(s"Repo $repo")
 
-              if (urls.contains(Upload(user, repo))) {
+              if (urls.contains(up)) {
                 Ok("URL already stored")
               } else {
 
                 val exists = Http(s"https://api.github.com/repos/$user/$repo/commits/master").asString
                 if (exists.is2xx) {
-                  urls.put(Upload(user, repo), false)
+                  urls.add(up)
                   scribe.info(urls.toString)
-                  Ok(urls(Upload(user, repo)).toString)
+                  Ok(urls(up).toString)
                 } else {
                   NotFound(s"$url not found on github")
                 }
               }
             case HttpMethod("GET") =>
+              val query = req.queryString.getOrElse("")
+
+              val path = req.path.stripSuffix(query)
               val file = req.path.afterLast("/")
               val branch = req.path.stripSuffix(s"/$file").afterLast("/")
               val repo = req.path.stripSuffix(s"/$branch/$file").afterLast("/")
               val user = req.path.stripSuffix(s"/$repo/$branch/$file").afterLast("/")
-              val up = Upload(user, repo)
+              val up = Upload(repo, user)
 
               if (urls.contains(up)) {
                 val body = Ok(Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes.body)
-                if (urls(up)) {
+                if (query == "brotli=true") {
                   body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
                 } else {
                   body
