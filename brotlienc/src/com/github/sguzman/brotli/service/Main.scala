@@ -1,9 +1,9 @@
 package com.github.sguzman.brotli.service
 
-import java.net.URL
-
 import com.github.sguzman.brotli.service.protoc.upload.Upload
 import com.github.sguzman.brotli.service.typesafe.Github
+import io.circe.generic.auto._
+import io.circe.parser.decode
 import lol.http.{Server, _}
 import org.apache.commons.lang3.StringUtils
 import scalaj.http.Http
@@ -12,18 +12,10 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-import io.circe.parser.decode
-import io.circe.generic.auto._
-
 object Main {
   implicit final class StrWrap(str: String) {
     def before(sep: String) = StringUtils.substringBefore(str, sep)
     def afterLast(sep: String) = StringUtils.substringAfterLast(str, sep)
-  }
-
-  def extract(url: String) = {
-    val user = url.stripPrefix("/").before("/")
-    (user, url.stripPrefix(s"/$user/").before("/"))
   }
 
   val urls: mutable.HashSet[Upload] = mutable.HashSet()
@@ -36,15 +28,14 @@ object Main {
 
     Server.listen(port) {req =>
       util.Try{
-        req.readAs[String].map{url =>
+        req.readAs[Array[Byte]].map{url =>
           req.method match {
             case HttpMethod("PUT") =>
               scribe.info(s"Received: $url")
-              val obj = new URL(url)
-              val (user, repo) = extract(obj.getPath)
-              val up = Upload(user, repo)
+              val up = Upload.parseFrom(url)
+              val user = up.user
+              val repo = up.repo
 
-              scribe.info(s"Path ${obj.getPath}")
               scribe.info(s"User $user")
               scribe.info(s"Repo $repo")
 
