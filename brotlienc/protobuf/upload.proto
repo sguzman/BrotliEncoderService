@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.github.sguzman.brotli.service;
+package com.github.sguzman.brotli.service.protoc;
 
 message Upload {
     string url = 1;
