@@ -38,16 +38,21 @@ object Main {
             scribe.info(obj.branch)
             scribe.info(obj.file)
 
-            val body = Ok(Http(s"https://raw.githubusercontent.com/${obj.user}/${obj.repo}/${obj.branch}/${obj.file}").asBytes.body)
-            val response = if (obj.brotli) {
-              body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
-            } else {
-              body
-            }
+            val resp = Http(s"https://raw.githubusercontent.com/${obj.user}/${obj.repo}/${obj.branch}/${obj.file}").asBytes
+            if (resp.is2xx) {
+              val body = Ok(resp.body)
+              val response = if (obj.brotli) {
+                body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
+              } else {
+                body
+              }
 
-            response.addHeaders(
-              (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
-              (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+              response.addHeaders(
+                (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
+                (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+            } else {
+              NotFound
+            }
           case _ => NotFound
         }
       } match {
