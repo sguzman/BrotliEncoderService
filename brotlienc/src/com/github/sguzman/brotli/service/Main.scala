@@ -21,40 +21,33 @@ object Main {
       case Failure(_) => 8888
     }
 
-    Server.listen(port) {req =>
-      util.Try{
-        req.method match {
-          case HttpMethod("GET") =>
-            val split = req.path.split("/")
-            val obj = Item(split(1), split(2), split(3), split(4), req.queryStringParameters.contains("brotli"))
+    Server.listen(port) {
+      case request @ GET at url"/$user/$repo/$branch/$file" =>
 
-            scribe.info(obj.user)
-            scribe.info(obj.repo)
-            scribe.info(obj.branch)
-            scribe.info(obj.file)
+        val brotli = request.queryStringParameters.contains("brotli") && request.queryStringParameters("brotli") == "true"
+        scribe.info(user)
+        scribe.info(repo)
+        scribe.info(branch)
+        scribe.info(file)
+        scribe.info(brotli)
 
-            val resp = Http(s"https://raw.githubusercontent.com/${obj.user}/${obj.repo}/${obj.branch}/${obj.file}").asBytes
-            if (resp.is2xx) {
-              val body = Ok(resp.body)
-              val response = if (obj.brotli) {
-                body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
-              } else {
-                body
-              }
+        val resp = Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes
+        if (resp.is2xx) {
+          val body = Ok(resp.body)
+          val response = if (brotli) {
+            body.addHeaders((HttpString("Content-Encoding"), HttpString("br")))
+          } else {
+            body
+          }
 
-              response.addHeaders(
-                (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
-                (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
-              )
-            } else {
-              NotFound
-            }
-          case _ => NotFound
+          response.addHeaders(
+            (HttpString("Access-Control-Allow-Origin"), HttpString("*")),
+            (HttpString("Access-Control-Allow-Headers"), HttpString("Origin, X-Requested-With, Content-Type, Accept"))
+          )
+        } else {
+          NotFound
         }
-      } match {
-          case Success(v) => v
-          case Failure(e) => InternalServerError(e.getMessage)
-        }
+      case _ => NotFound
     }
 
     println("Listening on http://localhost:8888...")
