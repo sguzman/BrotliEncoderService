@@ -29,7 +29,7 @@ object Main {
         scribe.info(repo)
         scribe.info(branch)
         scribe.info(file)
-        scribe.info(brotli)
+        scribe.info(brotli.toString)
 
         val resp = Http(s"https://raw.githubusercontent.com/$user/$repo/$branch/$file").asBytes
         if (resp.is2xx) {
